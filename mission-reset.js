@@ -12,6 +12,13 @@
     location.reload();
   }
 
+  function hardRetry(){
+    clearTransientInput();
+    // A full reload avoids stale ammo/held-fire state surviving after destruction.
+    try{sessionStorage.setItem('aero-auto-retry','1')}catch{}
+    location.reload();
+  }
+
   function install(){
     const back=document.getElementById('back');
     if(back&&!back.dataset.fullReset){
@@ -24,13 +31,25 @@
     }
 
     const again=document.getElementById('again');
-    if(again&&!again.dataset.inputReset){
-      again.dataset.inputReset='1';
-      again.addEventListener('click',clearTransientInput,true);
+    if(again&&!again.dataset.fullReset){
+      again.dataset.fullReset='1';
+      again.addEventListener('click',e=>{
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        hardRetry();
+      },true);
     }
   }
 
-  addEventListener('DOMContentLoaded',install);
+  addEventListener('DOMContentLoaded',()=>{
+    install();
+    let retry=false;
+    try{retry=sessionStorage.getItem('aero-auto-retry')==='1';sessionStorage.removeItem('aero-auto-retry')}catch{}
+    if(retry){
+      // Wait for the core engine to install its DECOLLA handler, then start fresh.
+      setTimeout(()=>document.getElementById('start')?.click(),120);
+    }
+  });
   setInterval(install,500);
   clearTransientInput();
 })();
