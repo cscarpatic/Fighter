@@ -28,29 +28,39 @@ function enemyHasFiringSolution(enemy){
   if(dist<35||dist>430)return false;
   to.normalize();
   const forward=new THREE.Vector3(0,0,-1).applyQuaternion(enemy.quaternion).normalize();
-  const dot=forward.dot(to);
-  // About a 24 degree half-angle: enemy guns can only fire close to the nose.
-  return dot>0.9135;
+  return forward.dot(to)>0.9135;
 }
 function enhanceTracer(mesh,enemy=false){
   if(mesh.userData.__tracerEnhanced)return;
   mesh.userData.__tracerEnhanced=true;
-  mesh.scale.set(enemy?1.05:1.25,enemy?1.7:2.15,enemy?1.05:1.25);
+
+  // Replace the original long cylinder with an actual 3D projectile sphere.
+  mesh.geometry?.dispose?.();
+  mesh.geometry=new THREE.SphereGeometry(enemy?1.45:1.65,10,8);
+  mesh.scale.setScalar(1);
+  mesh.rotation.set(0,0,0);
   if(mesh.material){
     mesh.material=mesh.material.clone();
     mesh.material.transparent=true;
     mesh.material.opacity=1;
     mesh.material.depthWrite=false;
-    mesh.material.color.setHex(enemy?0xff5533:0xfff2a0);
+    mesh.material.color.setHex(enemy?0xff4c32:0xffef91);
   }
+
+  // Soft spherical halo only: no elongated streaks.
   const glow=new THREE.Mesh(
-    new THREE.CylinderGeometry(enemy?1.15:1.4,enemy?1.15:1.4,enemy?18:25,6),
-    new THREE.MeshBasicMaterial({color:enemy?0xff3d24:0xffd85a,transparent:true,opacity:.26,depthWrite:false,blending:THREE.AdditiveBlending})
+    new THREE.SphereGeometry(enemy?2.55:2.9,10,8),
+    new THREE.MeshBasicMaterial({
+      color:enemy?0xff3d24:0xffd85a,
+      transparent:true,
+      opacity:.28,
+      depthWrite:false,
+      blending:THREE.AdditiveBlending
+    })
   );
-  glow.rotation.copy(mesh.rotation);
   mesh.add(glow);
-  const tip=new THREE.PointLight(enemy?0xff4028:0xffd45c,enemy?2.0:2.6,enemy?38:48,2);
-  mesh.add(tip);
+  const light=new THREE.PointLight(enemy?0xff4028:0xffd45c,enemy?1.7:2.2,enemy?28:34,2);
+  mesh.add(light);
 }
 
 THREE.Object3D.prototype.add=function(...objs){
@@ -62,12 +72,11 @@ THREE.Object3D.prototype.add=function(...objs){
       const playerShot=hex===0xfff2a0;
       if(enemyShot){
         const shooter=nearestEnemy(o.position);
-        if(!enemyHasFiringSolution(shooter)){
-          // Suppress impossible side/rear gunfire before the projectile enters scene.
-          continue;
-        }
+        if(!enemyHasFiringSolution(shooter))continue;
         enhanceTracer(o,true);
-      }else if(playerShot){enhanceTracer(o,false);}
+      }else if(playerShot){
+        enhanceTracer(o,false);
+      }
     }
     accepted.push(o);
   }
@@ -114,7 +123,6 @@ function frame(now){
     if(hp<=15)addDamageGlow(e);
     if(hp<=27&&smokeTimer<=0){smokePuff(e,hp<=15?1.5:1);smokeTimer=.085;}
     if(hp<prev){
-      // brief hit sparks at the fuselage
       for(let i=0;i<3;i++){
         const sp=new THREE.Mesh(new THREE.SphereGeometry(.8,5,4),new THREE.MeshBasicMaterial({color:0xffc258,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));
         sp.position.set((Math.random()-.5)*9,(Math.random()-.5)*5,(Math.random()-.5)*14);e.add(sp);
