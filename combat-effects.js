@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js';
 
-// Combat visual/behaviour layer. It is loaded before the core engine, so it can
-// validate newly-created projectiles without changing the flight model itself.
+// Combat visual/behaviour layer. Enemy fire is permitted only in a frontal cone,
+// but the cone is intentionally generous enough for the arcade AI to acquire targets.
 const originalAdd=THREE.Object3D.prototype.add;
 const smoke=[];
 const tracked=new WeakMap();
@@ -18,23 +18,23 @@ function nearestEnemy(pos){
     const d=e.position.distanceToSquared(pos);
     if(d<bd){bd=d;best=e;}
   }
-  return bd<140*140?best:null;
+  // Enemy projectiles are created at the shooter's current position.
+  return bd<90*90?best:null;
 }
 function enemyHasFiringSolution(enemy){
   const p=window.AeroOpsState?.player;
   if(!enemy||!p)return false;
   const to=p.position.clone().sub(enemy.position);
   const dist=to.length();
-  if(dist<35||dist>430)return false;
+  if(dist<28||dist>460)return false;
   to.normalize();
   const forward=new THREE.Vector3(0,0,-1).applyQuaternion(enemy.quaternion).normalize();
-  return forward.dot(to)>0.9135;
+  // ~38 degree half-angle. Still strictly frontal: no side/rear gunfire.
+  return forward.dot(to)>0.788;
 }
 function enhanceTracer(mesh,enemy=false){
   if(mesh.userData.__tracerEnhanced)return;
   mesh.userData.__tracerEnhanced=true;
-
-  // Replace the original long cylinder with an actual 3D projectile sphere.
   mesh.geometry?.dispose?.();
   mesh.geometry=new THREE.SphereGeometry(enemy?1.45:1.65,10,8);
   mesh.scale.setScalar(1);
@@ -46,17 +46,9 @@ function enhanceTracer(mesh,enemy=false){
     mesh.material.depthWrite=false;
     mesh.material.color.setHex(enemy?0xff4c32:0xffef91);
   }
-
-  // Soft spherical halo only: no elongated streaks.
   const glow=new THREE.Mesh(
     new THREE.SphereGeometry(enemy?2.55:2.9,10,8),
-    new THREE.MeshBasicMaterial({
-      color:enemy?0xff3d24:0xffd85a,
-      transparent:true,
-      opacity:.28,
-      depthWrite:false,
-      blending:THREE.AdditiveBlending
-    })
+    new THREE.MeshBasicMaterial({color:enemy?0xff3d24:0xffd85a,transparent:true,opacity:.28,depthWrite:false,blending:THREE.AdditiveBlending})
   );
   mesh.add(glow);
   const light=new THREE.PointLight(enemy?0xff4028:0xffd45c,enemy?1.7:2.2,enemy?28:34,2);
