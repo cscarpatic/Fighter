@@ -56,7 +56,6 @@ function drawLabel(l,o,p,force=false){
   const st=stateFor(o),name=(o.userData?.name||'TARGET').toUpperCase(),role=roleFor(o),rank=(o.userData.rank??0)+1;
   const key=[name,role,st.label,o.userData.hp,o.userData.maxHp].join('|');if(!force&&key===l.last)return;l.last=key;
   const x=l.ctx,c=l.canvas;x.clearRect(0,0,c.width,c.height);
-  // Fully transparent label: no panel and no filled background.
   x.shadowBlur=14;x.shadowColor=p.main;
   const title=`P${rank}  ${name}`;
   drawOutlined(x,title,600,70,fitFont(x,title,1080,74,40),'#ffffff','#05080b',10);
@@ -69,9 +68,12 @@ function drawLabel(l,o,p,force=false){
 function add(o){
   if(entries.has(o))return entries.get(o);
   const p=palette(o),nav=['ship','carrier'].includes(o.userData?.type),r=nav?36:24,g=new THREE.Group();g.userData.__targetMarker=true;
-  const ring=new THREE.Mesh(new THREE.RingGeometry(r,r+4.5,40),new THREE.MeshBasicMaterial({color:p.hex,transparent:true,opacity:.72,side:THREE.DoubleSide,depthTest:false}));ring.rotation.x=-Math.PI/2;ring.position.y=5;ring.renderOrder=1998;g.add(ring);
-  const pointer=new THREE.Mesh(new THREE.ConeGeometry(3.8,10,8),new THREE.MeshBasicMaterial({color:p.hex,transparent:true,opacity:.78,depthTest:false}));pointer.position.y=74;pointer.rotation.z=Math.PI;pointer.renderOrder=1999;g.add(pointer);
-  const label=makeLabel(o,p);label.s.position.y=105;g.add(label.s);
+  // Ring belongs to the world surface: respect depth so aircraft and scenery occlude it.
+  const ringMat=new THREE.MeshBasicMaterial({color:p.hex,transparent:true,opacity:.48,side:THREE.DoubleSide,depthTest:true,depthWrite:false});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(r,r+3.5,40),ringMat);ring.rotation.x=-Math.PI/2;ring.position.y=1.2;ring.renderOrder=0;g.add(ring);
+  // Small pointer also respects depth; only the text label remains an overlay.
+  const pointer=new THREE.Mesh(new THREE.ConeGeometry(3.2,8,8),new THREE.MeshBasicMaterial({color:p.hex,transparent:true,opacity:.72,depthTest:true,depthWrite:false}));pointer.position.y=58;pointer.rotation.z=Math.PI;pointer.renderOrder=0;g.add(pointer);
+  const label=makeLabel(o,p);label.s.position.y=92;g.add(label.s);
   o.add(g);o.userData.__targetMarker=true;
   const e={o,g,ring,pointer,label,p,phase:Math.random()*6};entries.set(o,e);return e;
 }
@@ -91,7 +93,7 @@ function frame(t=0){
   for(const o of state.targets||[]){
     if(!o)continue;
     if(o.userData?.dead||o.userData?.hp<=0){const e=entries.get(o);if(e)e.g.visible=false;destroyedSprite(o,scene);continue;}
-    if(o.parent){const e=add(o);e.g.visible=true;drawLabel(e.label,o,e.p);const q=1+Math.sin(t*.004+e.phase)*.035;e.ring.scale.setScalar(q);e.pointer.position.y=74+Math.sin(t*.003+e.phase)*3;}
+    if(o.parent){const e=add(o);e.g.visible=true;drawLabel(e.label,o,e.p);const q=1+Math.sin(t*.004+e.phase)*.025;e.ring.scale.setScalar(q);e.pointer.position.y=58+Math.sin(t*.003+e.phase)*2;}
   }
 }
 frame();
