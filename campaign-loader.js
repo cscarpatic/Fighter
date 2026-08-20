@@ -11,11 +11,12 @@ const MISSIONS=[
  {n:'Desert Storm',d:'17 gennaio 1991',land:true,pc:0x8b8b7d,ec:0x6e6a55,map:'Iraq centrale',b:'Livello 10. Prima notte di Desert Storm: aeroporti, difese e infrastrutture militari su una carta operativa compressa dell’Iraq centrale.',objectives:[['Al Taqaddum','hangar',1200],['Difesa aerea','aa',900],['Deposito corazzato','armor',750]],layout:[['Al Taqaddum air base','hangar',-180,-1540],['H-3 airfield','hangar',-620,-1920],['Military depot','armor',340,-1320],['Radar complex','aa',420,-1760],['Command bunker','armor',80,-2050]],aa:[[-500,-1450],[-250,-1850],[180,-1600],[520,-1500],[360,-2050]]}
 ];
 window.AERO_CAMPAIGN=MISSIONS;
-const source=await fetch('./loader.js?campaignCore=15').then(r=>{if(!r.ok)throw new Error('loader '+r.status);return r.text()});
+const source=await fetch('./loader.js?campaignCore=16').then(r=>{if(!r.ok)throw new Error('loader '+r.status);return r.text()});
 const missionCode='const MISSIONS='+JSON.stringify(MISSIONS)+';';
 let patched=source.replace(/const MISSIONS=\[[\s\S]*?\n\];/,missionCode);
 patched=patched.replace('let mi=0,order=[0,1,2]','let mi=Math.max(0,Math.min(MISSIONS.length-1,+(localStorage.getItem("aero-level")||0))),order=[0,1,2]');
-patched=patched.replace('let hp=100,ammo=420,bombs=6,','let hp=100,ammo=420,bombs=12,');
+patched=patched.replace('let hp=100,ammo=420,bombs=6,','let hp=100,ammo=420,bombs=16,');
+patched=patched.replace('speed=1.85;thr=.44;t=0;cam=0;en=[];','speed=1.85;thr=.44;t=0;cam=0;lastFire=lastBomb=lastEnemy=0;keys={};en=[];');
 if(patched===source)throw new Error('Campaign patch non applicata');
 const blob=new Blob([patched],{type:'text/javascript'});
 await import(URL.createObjectURL(blob));
