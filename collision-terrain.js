@@ -23,13 +23,14 @@ function impactOverlay(){
   let o=document.getElementById('collisionImpact');
   if(!o){
     o=document.createElement('div');o.id='collisionImpact';
+    // Same composition used by the NEW MISSION / LEVEL COMPLETED transition.
     o.style.cssText='position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.30));font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;text-align:center;color:#fff;text-shadow:0 4px 18px #000';
-    o.innerHTML='<div style="padding:24px 34px;border-top:2px solid rgba(255,100,70,.95);border-bottom:2px solid rgba(255,100,70,.95);background:rgba(3,10,16,.23);box-shadow:0 0 45px rgba(0,0,0,.24)"><div class="kicker" style="font-size:14px;font-weight:900;letter-spacing:.28em;color:#ff9d6d">COLLISIONE IN VOLO</div><div class="title" style="font-size:clamp(42px,8vw,88px);line-height:.95;font-weight:1000;letter-spacing:-.04em;margin:8px 0">IMPATTO</div><div class="sub" style="font-size:clamp(15px,2.4vw,25px);font-weight:800;letter-spacing:.08em;color:#ffe0d7">VELIVOLO DISTRUTTO</div></div>';
+    o.innerHTML='<div style="padding:24px 34px;border-top:2px solid rgba(255,220,120,.92);border-bottom:2px solid rgba(255,220,120,.92);background:rgba(3,10,16,.23);box-shadow:0 0 45px rgba(0,0,0,.24)"><div class="kicker" style="font-size:14px;font-weight:900;letter-spacing:.28em;color:#ffd86d">EVENTO CRITICO</div><div class="title" style="font-size:clamp(42px,8vw,88px);line-height:.95;font-weight:1000;letter-spacing:-.04em;margin:8px 0">COLLISIONE</div><div class="sub" style="font-size:clamp(15px,2.4vw,25px);font-weight:800;letter-spacing:.08em;color:#dff5ff">COLLISIONE AVVENUTA</div></div>';
     document.body.appendChild(o);
   }
   o.style.opacity='1';o.style.display='flex';
-  const a=o.animate?.([{opacity:0},{opacity:1}],{duration:300,easing:'ease-out',fill:'forwards'});
-  setTimeout(()=>{const b=o.animate?.([{opacity:1},{opacity:0}],{duration:420,easing:'ease-in',fill:'forwards'});if(b)b.onfinish=()=>{o.style.display='none';o.style.opacity='1'};else o.style.display='none';},1150);
+  o.animate?.([{opacity:0},{opacity:1}],{duration:300,easing:'ease-out'});
+  setTimeout(()=>{const b=o.animate?.([{opacity:1},{opacity:0}],{duration:450,easing:'ease-in',fill:'forwards'});if(b)b.onfinish=()=>{o.style.display='none';o.style.opacity='1'};else o.style.display='none';},1400);
 }
 
 function collisionFX(scene,pos){
@@ -55,7 +56,7 @@ function collisionFX(scene,pos){
   const start=performance.now();
   function anim(now){
     const age=(now-start)/1000,dt=.016;
-    if(age>1.55){scene.remove(root);root.traverse(o=>{o.geometry?.dispose?.();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose?.());else o.material.dispose?.()}});return}
+    if(age>1.7){scene.remove(root);root.traverse(o=>{o.geometry?.dispose?.();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose?.());else o.material.dispose?.()}});return}
     core.scale.setScalar(1+age*2.7);core.material.opacity=Math.max(0,1-age*1.5);
     fire.scale.setScalar(1+age*2.1);fire.material.opacity=Math.max(0,.95-age*.68);light.intensity=Math.max(0,7-age*5);
     for(const s of smoke){s.position.addScaledVector(s.userData.v,dt);s.userData.v.y+=4*dt;s.scale.multiplyScalar(1.012);s.material.opacity=Math.max(0,.7-age*.25)}
@@ -66,16 +67,14 @@ function collisionFX(scene,pos){
 }
 
 function keepCrashAircraft(scene,p,enemy,pos){
-  // Freeze visual copies at the collision point so the aircraft remain visible through the explosion.
   const a=p.clone(true),b=enemy.clone(true);
   a.position.copy(p.position);a.quaternion.copy(p.quaternion);
   b.position.copy(enemy.position);b.quaternion.copy(enemy.quaternion);
   a.userData.__crashVisual=true;b.userData.__crashVisual=true;
   scene.add(a,b);
   p.visible=false;enemy.visible=false;
-  const mid=pos.clone();
-  a.position.lerp(mid,.18);b.position.lerp(mid,.18);
-  setTimeout(()=>{scene.remove(a);scene.remove(b);},1700);
+  const mid=pos.clone();a.position.lerp(mid,.18);b.position.lerp(mid,.18);
+  setTimeout(()=>{scene.remove(a);scene.remove(b);},1900);
 }
 
 function showGameOver(){
@@ -97,10 +96,9 @@ function loseByCollision(state,enemy){
   const p=state?.player,scene=p?.parent;if(!p||!scene)return;
   collisionPending=true;window.__AERO_COLLISION_LOSS=true;
   const pos=p.position.clone().lerp(enemy.position,.5);
-  keepCrashAircraft(scene,p,enemy,pos);
-  collisionFX(scene,pos);impactOverlay();
+  keepCrashAircraft(scene,p,enemy,pos);collisionFX(scene,pos);impactOverlay();
   if(p.userData)p.userData.hp=0;if(enemy.userData){enemy.userData.hp=0;enemy.userData.dead=true;}
-  setTimeout(showGameOver,1500);
+  setTimeout(showGameOver,1700);
 }
 
 function checkCollision(state){
