@@ -23,12 +23,13 @@ function impactOverlay(){
   let o=document.getElementById('collisionImpact');
   if(!o){
     o=document.createElement('div');o.id='collisionImpact';
-    o.style.cssText='position:fixed;inset:0;z-index:99990;pointer-events:none;display:grid;place-items:center;background:radial-gradient(circle,rgba(255,145,35,.14),rgba(110,0,0,.08) 34%,transparent 68%);font-family:system-ui,sans-serif;text-align:center;color:#fff;text-shadow:0 4px 18px #000';
-    o.innerHTML='<div><strong style="display:block;font-size:clamp(44px,9vw,110px);letter-spacing:.08em;color:#ff6b36">IMPATTO</strong><span style="font-size:clamp(16px,2.4vw,28px);font-weight:900">COLLISIONE IN VOLO</span></div>';
+    o.style.cssText='position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.30));font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;text-align:center;color:#fff;text-shadow:0 4px 18px #000';
+    o.innerHTML='<div style="padding:24px 34px;border-top:2px solid rgba(255,100,70,.95);border-bottom:2px solid rgba(255,100,70,.95);background:rgba(3,10,16,.23);box-shadow:0 0 45px rgba(0,0,0,.24)"><div class="kicker" style="font-size:14px;font-weight:900;letter-spacing:.28em;color:#ff9d6d">COLLISIONE IN VOLO</div><div class="title" style="font-size:clamp(42px,8vw,88px);line-height:.95;font-weight:1000;letter-spacing:-.04em;margin:8px 0">IMPATTO</div><div class="sub" style="font-size:clamp(15px,2.4vw,25px);font-weight:800;letter-spacing:.08em;color:#ffe0d7">VELIVOLO DISTRUTTO</div></div>';
     document.body.appendChild(o);
   }
-  o.style.display='grid';o.animate?.([{opacity:0},{opacity:1,offset:.16},{opacity:1,offset:.72},{opacity:0}],{duration:1450,easing:'ease-out',fill:'forwards'});
-  setTimeout(()=>{o.style.display='none'},1500);
+  o.style.opacity='1';o.style.display='flex';
+  const a=o.animate?.([{opacity:0},{opacity:1}],{duration:300,easing:'ease-out',fill:'forwards'});
+  setTimeout(()=>{const b=o.animate?.([{opacity:1},{opacity:0}],{duration:420,easing:'ease-in',fill:'forwards'});if(b)b.onfinish=()=>{o.style.display='none';o.style.opacity='1'};else o.style.display='none';},1150);
 }
 
 function collisionFX(scene,pos){
@@ -64,6 +65,19 @@ function collisionFX(scene,pos){
   requestAnimationFrame(anim);
 }
 
+function keepCrashAircraft(scene,p,enemy,pos){
+  // Freeze visual copies at the collision point so the aircraft remain visible through the explosion.
+  const a=p.clone(true),b=enemy.clone(true);
+  a.position.copy(p.position);a.quaternion.copy(p.quaternion);
+  b.position.copy(enemy.position);b.quaternion.copy(enemy.quaternion);
+  a.userData.__crashVisual=true;b.userData.__crashVisual=true;
+  scene.add(a,b);
+  p.visible=false;enemy.visible=false;
+  const mid=pos.clone();
+  a.position.lerp(mid,.18);b.position.lerp(mid,.18);
+  setTimeout(()=>{scene.remove(a);scene.remove(b);},1700);
+}
+
 function showGameOver(){
   const end=document.getElementById('end'), game=document.getElementById('game');
   if(!end||!game)return;
@@ -83,11 +97,10 @@ function loseByCollision(state,enemy){
   const p=state?.player,scene=p?.parent;if(!p||!scene)return;
   collisionPending=true;window.__AERO_COLLISION_LOSS=true;
   const pos=p.position.clone().lerp(enemy.position,.5);
-  impactOverlay();collisionFX(scene,pos);
-  p.visible=false;enemy.visible=false;
+  keepCrashAircraft(scene,p,enemy,pos);
+  collisionFX(scene,pos);impactOverlay();
   if(p.userData)p.userData.hp=0;if(enemy.userData){enemy.userData.hp=0;enemy.userData.dead=true;}
-  // Keep the 3D scene visible long enough to see the crash before the GAME OVER overlay.
-  setTimeout(showGameOver,1350);
+  setTimeout(showGameOver,1500);
 }
 
 function checkCollision(state){
