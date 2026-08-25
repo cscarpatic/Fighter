@@ -1,0 +1,10 @@
+{
+  "name": "Aero Ops 3D",
+  "short_name": "Aero Ops",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07111b",
+  "theme_color": "#07111b"
+}
